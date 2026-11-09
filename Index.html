@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Survive the Savanna - Game 1</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f1e8; margin: 0; padding: 20px; color: #222; }
+  .container { max-width: 700px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+  h1 { color: #2e5d34; text-align: center; }
+  h2 { color: #c05a1e; }
+  .btn { background: #2e5d34; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 5px; cursor: pointer; font-size: 16px; }
+  .btn:hover { background: #1e3d22; }
+  .btn:disabled { background: #ccc; cursor: not-allowed; }
+  .hidden { display: none; }
+  .stats { display: flex; justify-content: space-between; background: #e8e8e8; padding: 10px; border-radius: 5px; font-weight: bold; }
+  .event-box { background: #fff3cd; border: 2px solid #ffc107; padding: 15px; margin: 15px 0; border-radius: 5px; font-size: 18px; font-weight: bold; text-align: center; }
+  .decision-box { background: #d1ecf1; border: 2px solid #17a2b8; padding: 15px; margin: 15px 0; border-radius: 5px; }
+  .feedback { background: #d4edda; border: 2px solid #28a745; padding: 15px; margin: 15px 0; border-radius: 5px; font-weight: bold; }
+  .error { color: red; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🌿 Survive the Savanna 🌿</h1>
+  
+  <div id="startScreen">
+    <h2>Welcome to the Game!</h2>
+    <p><strong>Goal:</strong> Survive 4 rounds with the most energy remaining at the highest trophic level.</p>
+    <p><strong>Rules:</strong></p>
+    <ul>
+      <li>Producers start with 100 energy tokens. All other levels start with 10.</li>
+      <li>Each round: Draw an event card, then make a decision (Reproduce, Store, or Hunt/Forage).</li>
+      <li>Energy transfers upward at 10% per round.</li>
+      <li>Round 3 has a Knowledge Checkpoint for bonus energy.</li>
+      <li>Round 4 is a drought - you must predict what happens!</li>
+    </ul>
+    <p><strong>Select your trophic level to begin:</strong></p>
+    <button class="btn" onclick="startGame('Producer', 100)">🌱 Producer (100 tokens)</button>
+    <button class="btn" onclick="startGame('Primary Consumer', 10)">🦓 Primary Consumer (10 tokens)</button>
+    <button class="btn" onclick="startGame('Secondary Consumer', 10)">🐍 Secondary Consumer (10 tokens)</button>
+    <button class="btn" onclick="startGame('Tertiary Consumer', 10)">🦅 Tertiary Consumer (10 tokens)</button>
+  </div>
+
+  <div id="gameScreen" class="hidden">
+    <div class="stats">
+      <span>Level: <span id="playerLevel"></span></span>
+      <span>Round: <span id="roundNum">1</span>/4</span>
+      <span>Energy: <span id="energyVal"></span></span>
+    </div>
+
+    <div id="eventBox" class="event-box"></div>
+
+    <div id="decisionBox" class="decision-box">
+      <h3>Choose your decision:</h3>
+      <button class="btn" onclick="makeDecision('reproduce')">Reproduce (-20 energy)</button>
+      <button class="btn" onclick="makeDecision('store')">Store (-10 energy)</button>
+      <button class="btn" onclick="makeDecision('hunt')">Hunt/Forage (Roll dice)</button>
+    </div>
+
+    <div id="feedbackBox" class="feedback hidden"></div>
+    <button id="nextRoundBtn" class="btn hidden" onclick="nextRound()">Next Round ➔</button>
+  </div>
+
+  <div id="checkpointScreen" class="hidden">
+    <h2>🧠 Round 3 Knowledge Checkpoint</h2>
+    <p>Answer correctly for +5 bonus energy!</p>
+    <div id="q1">
+      <p>1. Why do producers have more energy than primary consumers?</p>
+      <button class="btn" onclick="checkAnswer(1, 'a')">A) They are bigger</button>
+      <button class="btn" onclick="checkAnswer(1, 'b')">B) Energy is lost as heat at each transfer</button>
+      <button class="btn" onclick="checkAnswer(1, 'c')">C) They eat more food</button>
+    </div>
+    <div id="q2" class="hidden">
+      <p>2. If a secondary consumer has 50 energy units, how much will the tertiary consumer receive?</p>
+      <button class="btn" onclick="checkAnswer(2, 'a')">A) 50</button>
+      <button class="btn" onclick="checkAnswer(2, 'b')">B) 10</button>
+      <button class="btn" onclick="checkAnswer(2, 'c')">C) 5</button>
+    </div>
+    <div id="q3" class="hidden">
+      <p>3. True or False: Energy is recycled in an ecosystem.</p>
+      <button class="btn" onclick="checkAnswer(3, 'a')">A) True</button>
+      <button class="btn" onclick="checkAnswer(3, 'b')">B) False</button>
+    </div>
+    <p id="checkpointFeedback" class="feedback hidden"></p>
+    <button id="continueToRound4" class="btn hidden" onclick="continueToRound4()">Continue to Round 4 ➔</button>
+  </div>
+
+  <div id="droughtScreen" class="hidden">
+    <h2>🔥 Round 4: The Drought 🔥</h2>
+    <p>The rain has stopped. What do you predict will happen to your trophic level?</p>
+    <textarea id="prediction" rows="3" style="width: 100%; padding: 10px; margin-bottom: 10px;" placeholder="Type your prediction here..."></textarea>
+    <button class="btn" onclick="submitPrediction()">Submit Prediction & Play Round</button>
+  </div>
+
+  <div id="endScreen" class="hidden">
+    <h2>🏁 Game Over!</h2>
+    <p id="finalResult"></p>
+    <h3>Reflection Questions:</h3>
+    <ol>
+      <li>What happened to your energy over 4 rounds? Why?</li>
+      <li>Why are there fewer lions than springboks in a real savanna?</li>
+      <li>What would happen to your group if all producers disappeared?</li>
+    </ol>
+    <button class="btn" onclick="location.reload()">Play Again</button>
+  </div>
+
+</div>
+
+<script>
+  let playerLevel = '';
+  let energy = 0;
+  let round = 1;
+  let checkpointScore = 0;
+  let predictionText = '';
+
+  const events = [
+    { name: "Drought", effect: -20, msg: "Drought! You lose 20% of your energy." },
+    { name: "Wildfire", effect: -30, msg: "Wildfire! Producers lose 30% energy (but you survive)." },
+    { name: "Disease", effect: -15, msg: "Disease! Consumers lose 15% energy." },
+    { name: "Good Rains", effect: 20, msg: "Good rains! Producers gain 20% energy." },
+    { name: "Human Poaching", effect: -25, msg: "Poaching! Tertiary consumers lose 25% energy." },
+    { name: "No Event", effect: 0, msg: "Lucky round! No event this time." }
+  ];
+
+  function startGame(level, startEnergy) {
+    playerLevel = level;
+    energy = startEnergy;
+    round = 1;
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+    updateStats();
+    playRound();
+  }
+
+  function updateStats() {
+    document.getElementById('playerLevel').textContent = playerLevel;
+    document.getElementById('roundNum').textContent = round;
+    document.getElementById('energyVal').textContent = Math.max(0, Math.round(energy));
+  }
+
+  function playRound() {
+    if (round === 3 && checkpointScore === 0) {
+      document.getElementById('gameScreen').classList.add('hidden');
+      document.getElementById('checkpointScreen').classList.remove('hidden');
+      return;
+    }
+
+    if (round === 4) {
+      document.getElementById('gameScreen').classList.add('hidden');
+      document.getElementById('droughtScreen').classList.remove('hidden');
+      return;
+    }
+
+    document.getElementById('eventBox').classList.remove('hidden');
+    document.getElementById('decisionBox').classList.remove('hidden');
+    document.getElementById('feedbackBox').classList.add('hidden');
+    document.getElementById('nextRoundBtn').classList.add('hidden');
+
+    // Draw event
+    let ev = events[Math.floor(Math.random() * events.length)];
+    
+    // Apply event modifier based on level
+    let eventEffect = ev.effect;
+    if (ev.name === "Wildfire" && playerLevel !== "Producer") eventEffect = 0; 
+    if (ev.name === "Disease" && playerLevel === "Producer") eventEffect = 0;
+    if (ev.name === "Human Poaching" && playerLevel !== "Tertiary Consumer") eventEffect = 0;
+
+    let eventLoss = energy * (Math.abs(eventEffect) / 100);
+    if (eventEffect > 0) {
+      energy += eventLoss;
+    } else {
+      energy -= eventLoss;
+    }
+
+    document.getElementById('eventBox').textContent = ev.msg + (eventEffect === 0 ? "" : ` (Energy change: ${eventEffect > 0 ? '+' : ''}${eventEffect}%)`);
+    updateStats();
+  }
+
+  function makeDecision(choice) {
+    document.getElementById('decisionBox').classList.add('hidden');
+    let msg = "";
+    
+    if (choice === 'reproduce') {
+      energy -= 20;
+      msg = "You reproduced! You lost 20 energy but gained a new organism.";
+    } else if (choice === 'store') {
+      energy -= 10;
+      msg = "You stored energy. You lost 10 energy but kept your cards.";
+    } else if (choice === 'hunt') {
+      let roll = Math.floor(Math.random() * 6) + 1;
+      if (roll <= 3) {
+        energy -= 15;
+        msg = `You rolled a ${roll}. Hunt failed! You lost 15 energy.`;
+      } else {
+        energy += 10;
+        msg = `You rolled a ${roll}. Hunt successful! You gained 10 energy.`;
+      }
+    }
+
+    // Energy transfer (10% rule simulated)
+    let transfer = energy * 0.1;
+    energy += transfer;
+    msg += ` | Energy transferred upward: +${Math.round(transfer)}`;
+
+    document.getElementById('feedbackBox').classList.remove('hidden');
+    document.getElementById('feedbackBox').textContent = msg;
+    document.getElementById('nextRoundBtn').classList.remove('hidden');
+    updateStats();
+  }
+
+  function nextRound() {
+    round++;
+    if (round > 4) {
+      endGame();
+    } else if (round === 3) {
+      playRound(); // triggers checkpoint
+    } else if (round === 4) {
+      playRound(); // triggers drought
+    } else {
+      playRound();
+    }
+  }
+
+  // Knowledge Checkpoint Logic
+  function checkAnswer(qNum, ans) {
+    let correct = false;
+    if (qNum === 1 && ans === 'b') correct = true;
+    if (qNum === 2 && ans === 'c') correct = true;
+    if (qNum === 3 && ans === 'b') correct = true;
+
+    if (correct) {
+      checkpointScore += 5;
+      energy += 5;
+      document.getElementById('checkpointFeedback').textContent = "Correct! +5 bonus energy.";
+    } else {
+      document.getElementById('checkpointFeedback').textContent = "Incorrect! The correct answer was different.";
+    }
+    document.getElementById('checkpointFeedback').classList.remove('hidden');
+
+    if (qNum === 1) {
+      document.getElementById('q1').classList.add('hidden');
+      document.getElementById('q2').classList.remove('hidden');
+    } else if (qNum === 2) {
+      document.getElementById('q2').classList.add('hidden');
+      document.getElementById('q3').classList.remove('hidden');
+    } else if (qNum === 3) {
+      document.getElementById('q3').classList.add('hidden');
+      document.getElementById('continueToRound4').classList.remove('hidden');
+    }
+    updateStats();
+  }
+
+  function continueToRound4() {
+    document.getElementById('checkpointScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+    document.getElementById('checkpointFeedback').classList.add('hidden');
+    document.getElementById('continueToRound4').classList.add('hidden');
+    round = 4;
+    playRound();
+  }
+
+  function submitPrediction() {
+    predictionText = document.getElementById('prediction').value;
+    document.getElementById('droughtScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+    playRound();
+  }
+
+  function endGame() {
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('endScreen').classList.remove('hidden');
+    let outcome = energy > 20 ? "You survived with energy remaining!" : "You struggled to survive. Energy was very low.";
+    document.getElementById('finalResult').textContent = `You finished as a ${playerLevel} with ${Math.round(energy)} energy. ${outcome}`;
+  }
+</script>
+</body>
+</html>
